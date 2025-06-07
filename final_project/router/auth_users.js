@@ -40,17 +40,51 @@ regd_users.post("/login", (req,res) => {
   } else {
     return res.status(401).json({message: "Invalid username or password"});
   }
-  
 });
 
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
   // Write yo
     const isbn = req.params.isbn;
-  const { review } = req.query;
+  const { queryReview } = req.query;
   if (books[isbn]) {
+    if (Object.keys(books[isbn].reviews).length > 0) {
+      Object.values(books[isbn].reviews).filter(review => review.username === req.session.authorization.username).forEach(foundReview => {
+        if(foundReview){
+          foundReview.review = queryReview;
+          console.log("Review Updated successfully", foundReview);
+          return res.status(200).json({message: `Book ${isbn} Review updated successfull`});
+        }else {
+          books[isbn].reviews[req.session.authorization.username] = { username: req.session.authorization.username, review: queryReview };
+          console.log("Review added successfully",books[isbn].reviews[req.session.authorization.username]);
+          return res.status(200).json({message: `Book ${isbn} Review added successfull`});
+        }
+      });
+    }else{
+      books[isbn].reviews[req.session.authorization.username] = { username: req.session.authorization.username, review: queryReview };
+      return res.status(200).json({message: `Book ${isbn} Review added successfull`});
+    }
+      
+  } else {
+    return res.status(404).json({message: "Book not found"});
+  }
+});
 
-      return res.status(200).json({message: "No reviews available for this book"});
+// delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+  const isbn = req.params.isbn;
+  if (books[isbn]) {
+    if (Object.keys(books[isbn].reviews).length > 0) {
+      if (books[isbn].reviews[req.session.authorization.username]) {
+        delete books[isbn].reviews[req.session.authorization.username];
+        console.log("Review deleted successfully");
+        return res.status(200).json({message: `Book ${isbn} Review deleted successfully`});
+      } else {
+        return res.status(404).json({message: "Review not found for this user"});
+      }
+    } else {
+      return res.status(404).json({message: "No reviews found for this book"});
+    }
   } else {
     return res.status(404).json({message: "Book not found"});
   }
